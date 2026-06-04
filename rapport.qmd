@@ -300,8 +300,9 @@ tt |>
 #| label: tbl-HN35
 #| tbl-cap: "Scores EORTC QLQ-HN35 (médiane, Q1-Q3)"
 
+hn35_noms <- names(tt)[startsWith(names(tt), "HN35_")]
 hn35_vars <- tt |>
-  select(starts_with("HN35_"))
+  select(all_of(hn35_noms))
 
 var_label(hn35_vars) <- list(
   HN35_douleur     = "Douleur buccale",
@@ -334,8 +335,6 @@ hn35_vars |>
 ```{r}
 #| label: tbl-corr-DT
 #| tbl-cap: "Corrélations de Spearman entre les sous-échelles QLQ-HN35 et le score DT"
-
-hn35_noms <- names(tt)[startsWith(names(tt), "HN35_")]
 
 corr_results <- lapply(hn35_noms, function(v) {
   test <- cor.test(tt$DT_score, tt[[v]], method = "spearman", exact = FALSE)

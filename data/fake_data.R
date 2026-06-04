@@ -53,7 +53,8 @@ DT_physique  <- sample(c("Oui", "Non"), n, replace = TRUE, prob = c(0.65, 0.35))
 # ---- EORTC QLQ-HN35 (scores 0-100) ----
 # Corrélation modérée attendue avec DT
 make_hn35_score <- function(dt, base_mean, base_sd, r = 0.4) {
-  noise <- rnorm(n, mean = 0, sd = base_sd * sqrt(1 - r^2))
+  n_obs <- length(dt)
+  noise <- rnorm(n_obs, mean = 0, sd = base_sd * sqrt(1 - r^2))
   score <- base_mean + r * base_sd * scale(dt)[, 1] + noise
   pmin(pmax(round(score), 0), 100)
 }
