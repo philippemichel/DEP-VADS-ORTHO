@@ -1,0 +1,95 @@
+---
+subtitle: "Plan d'analyse statistique"
+---
+
+```{r info}
+#| label: setup
+rm(list = ls())
+library("baseph")
+library("tidyverse")
+library("kableExtra")
+# sessionInfo()
+```
+
+# Généralités
+
+Le risque $\alpha$ retenu sera de 0,05 & la puissance de 0,8.
+
+Vu le faible nombre de cas attendu, on ne fera pas d'hypothèse de normalité. Les variables numériques seront présentées par leur médiane avec les quartiles (Q1-Q3) & comparées grâce au test non paramétrique de Wilcoxon. Les variables discrètes seront présentées en nombre avec le pourcentage ; l'intervalle de confiance (à 95 %) sera calculé par bootstrap (package `boot` [@boot]). Le test du $\chi^2$ sera utilisé sous réserve d'un effectif suffisant, à défaut le test exact de Fischer. Des graphiques seront réalisés pour les résultats importants (package `ggplot2` [@ggplot]).
+
+## Taille de l'échantillon
+
+Il s'agit d'une étude observationnelle de faisabilité pour laquelle il est difficile de préciser a priori un nombre de cas nécessaires. Néanmoins, sur la base de la littérature rapportant une prévalence de détresse psychosociale d'environ 30 à 50 % chez les patients atteints de cancers des VADS, un minimum de 40 à 50 cas est requis pour obtenir une estimation suffisamment précise de la proportion avec un intervalle de confiance acceptable.
+
+## Données manquantes
+
+Le décompte des données manquantes sera réalisé & présenté par un tableau ou un graphique (package `visdat` [@visdat]). Les variables comportant plus de 20 % de données manquantes ou non utilisables ne seront pas prises en compte après validation par le promoteur.
+
+Une imputation des données manquantes (package `missMDA` [@miss]) sera réalisée uniquement pour les analyses de corrélation & pour la recherche du meilleur modèle par step-by-step descendant. Le calcul final sera effectué sur les données réelles.
+
+# Description de la population
+
+Un tableau descriptif présentera les caractéristiques démographiques & cliniques des patients inclus : âge, sexe, type & stade du cancer, type de traitement reçu (chirurgie, radiothérapie, chimiothérapie ou combinaison), délai depuis le diagnostic, nombre de séances d'orthophonie réalisées.
+
+Les variables continues seront présentées en médiane (Q1-Q3) et les variables catégorielles en effectif et pourcentage.
+
+# Objectif principal
+
+**Proportion de patients présentant une détresse psychosociale identifiée**
+
+La détresse psychosociale sera évaluée par le *Distress Thermometer* (DT) [@DT; @DTvalid], échelle numérique allant de 0 (aucune détresse) à 10 (détresse extrême). Le seuil clinique retenu sera de **4** conformément aux recommandations du NCCN [@NCCN] & aux données de validation françaises [@DTvalid].
+
+La proportion de patients présentant un score DT $\geq$ 4 sera calculée avec son intervalle de confiance à 95 % (méthode de Wilson).
+
+Une description des domaines de préoccupation identifiés sur la liste de problèmes associée au DT (domaines pratiques, familiaux, émotionnels, spirituels, physiques) sera réalisée.
+
+## Analyse par sous-groupes
+
+Une analyse exploratoire comparera la proportion de patients en détresse selon :
+
+- Le stade de la maladie (localisé vs localement avancé/métastatique)
+- Le type de traitement (chirurgie seule vs traitement incluant radiothérapie/chimiothérapie)
+- La phase de prise en charge (traitement actif vs surveillance)
+- Le délai depuis le diagnostic
+
+Ces comparaisons seront effectuées avec le test exact de Fisher (effectifs attendus faibles) ou le test du $\chi^2$ selon les conditions d'application.
+
+# Objectifs secondaires
+
+## Objectif 1 : Scores EORTC QLQ-HN35 & corrélation avec la détresse psychosociale
+
+Le questionnaire **EORTC QLQ-HN35** [@HN35] est un instrument validé d'évaluation de la qualité de vie spécifique aux cancers de la tête et du cou (35 items couvrant symptômes & fonctions). Les scores seront calculés selon le manuel de scoring EORTC (transformation linéaire en scores de 0 à 100).
+
+Pour les **échelles fonctionnelles** et **symptomatiques** du QLQ-HN35, les scores seront présentés en médiane (Q1-Q3).
+
+La corrélation entre les scores QLQ-HN35 et le score DT sera évaluée par le **coefficient de corrélation de Spearman** [@spearman] (package `correlation` [@corr]) en raison de la non-normalité des distributions. L'interprétation retenue sera :
+
+- $|r_s| < 0,30$ : corrélation faible
+- $0,30 \leq |r_s| < 0,50$ : corrélation modérée
+- $|r_s| \geq 0,50$ : corrélation forte
+
+Une matrice de corrélation graphique sera produite pour visualiser l'ensemble des associations entre les sous-échelles du QLQ-HN35 & le score DT.
+
+## Objectif 2 : Acceptabilité du dépistage par les patients
+
+L'acceptabilité sera évaluée à l'aide d'une échelle de Likert en 4 niveaux (« Pas du tout acceptable », « Peu acceptable », « Acceptable », « Tout à fait acceptable ») renseignée par le patient à l'issue de la séance de dépistage.
+
+La proportion de patients jugeant le dépistage « Acceptable » ou « Tout à fait acceptable » sera calculée avec son intervalle de confiance à 95 %.
+
+Des facteurs associés à une moindre acceptabilité (score DT élevé, caractéristiques socio-démographiques) seront explorés par régression logistique si l'effectif le permet.
+
+## Objectif 3 : Nombre de patients orientés vers un professionnel de soutien psychologique
+
+Le nombre (et la proportion avec IC 95 %) de patients ayant été orientés vers un professionnel de soutien psychologique (psychologue, psychiatre, psycho-oncologue) à l'issue du dépistage sera rapporté.
+
+La concordance entre le résultat du dépistage (DT $\geq$ 4) & la décision d'orientation sera évaluée (sensibilité, spécificité, valeur prédictive positive & négative du seuil DT = 4 pour l'orientation).
+
+Le délai médian entre le dépistage & la prise en charge psychologique effective (premier rendez-vous obtenu) sera calculé, ainsi que la proportion de patients ayant effectivement consulté parmi ceux orientés.
+
+# Technique
+
+L'analyse statistique sera réalisée avec le logiciel **R** [@rstat] & divers packages. Outre ceux cités dans le texte on utilisera en particulier `tidyverse` [@tidy], `gtsummary` [@gtsummary] & `baseph` [@baseph].
+
+Un dépôt GitHub sera utilisé qui ne comprendra que le code & non les données ou résultats. Un jeu de données synthétique sera fourni pour permettre de tester le code en l'absence des données réelles.
+
+<https://github.com/philippemichel/DEP-VADS-ORTHO>
