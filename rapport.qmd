@@ -1,0 +1,542 @@
+---
+subtitle: "Rapport Statistique - V 1.0"
+---
+
+::: {.panel-tabset}
+
+# Introduction
+
+**Dépistage de la détresse psychosociale chez les patients atteints de cancer des voies aéro-digestives supérieures : faisabilité et intérêt d'un dépistage en pratique orthophonique.**
+
+Étude observationnelle prospective — Recherche n'impliquant pas la personne humaine (RNIPH).
+
+::: {.callout-tip collapse="true"}
+## Auteurs & investigateurs
+
+**Statisticien** : Philippe MICHEL — USRC, Hôpital NOVO (Pontoise)
+:::
+
+```{r}
+#| label: setup
+
+rm(list = ls())
+#
+library(baseph)
+library(tidyverse)
+library(gtsummary)
+library(kableExtra)
+library(plotly)
+library(corrplot)
+library(correlation)
+library(visdat)
+library(labelled)
+library(colorspace)
+library(ggsci)
+library(ggstats)
+library(scales)
+#
+theme_gtsummary_language(language = "fr", decimal.mark = ",")
+options(OutDec = ",")
+#
+expx <- FALSE
+classeur <- "DEP-VADS-ORTHO.xlsx"
+#
+ptest <- list(
+  all_continuous()  ~ "wilcox.test",
+  all_categorical() ~ "chisq.test"
+)
+```
+
+```{r}
+#| label: import
+
+# Charger les données réelles (remplacer par le chemin vers le vrai fichier)
+# load("data/real_data.RData")
+
+# Pour les tests : données synthétiques
+source("data/fake_data.R")
+```
+
+```{r}
+#| label: labels
+
+# Étiquettes pour les variables
+tt <- tt |>
+  mutate(
+    sexe         = factor(sexe),
+    localisation = factor(localisation),
+    stade        = factor(stade, levels = c("I-II", "III-IV")),
+    traitement   = factor(traitement),
+    phase        = factor(phase),
+    DT_positif   = factor(DT_positif, levels = c("Non", "Oui")),
+    acceptabilite = factor(
+      acceptabilite,
+      levels = c("Pas du tout acceptable", "Peu acceptable",
+                 "Acceptable", "Tout à fait acceptable")
+    ),
+    oriente = factor(oriente, levels = c("Non", "Oui"))
+  )
+
+var_label(tt) <- list(
+  age          = "Âge (ans)",
+  sexe         = "Sexe",
+  localisation = "Localisation tumorale",
+  stade        = "Stade TNM",
+  traitement   = "Type de traitement",
+  phase        = "Phase de prise en charge",
+  delai_diag   = "Délai depuis le diagnostic (mois)",
+  nb_seances   = "Nombre de séances d'orthophonie",
+  DT_score     = "Score Distress Thermometer (0-10)",
+  DT_positif   = "DT ≥ 4 (détresse significative)",
+  DT_pratique  = "Préoccupations pratiques",
+  DT_familial  = "Préoccupations familiales",
+  DT_emotionnel = "Préoccupations émotionnelles",
+  DT_spirituel = "Préoccupations spirituelles/religieuses",
+  DT_physique  = "Préoccupations physiques",
+  acceptabilite = "Acceptabilité du dépistage",
+  oriente      = "Orienté vers soutien psychologique",
+  consulte     = "A effectivement consulté",
+  delai_consul = "Délai avant consultation (semaines)"
+)
+```
+
+```{r}
+#| label: macro-table
+
+tabph <- function(df, pp = FALSE) {
+  zz <- df |>
+    bold_labels() |>
+    modify_header(label = " ")
+  if (pp) {
+    zz <- zz |>
+      add_p(test = ptest) |>
+      bold_p(t = 0.05)
+  }
+  zz |>
+    as_kable_extra() |>
+    kable_styling(c("striped", "hover")) |>
+    scroll_box(width = "100%", height = "600px")
+}
+```
+
+# Description de la population
+
+```{r}
+#| label: nb-cas
+
+ncas <- nrow(tt)
+```
+
+L'échantillon comprend **`r ncas` patients** atteints de cancer des VADS inclus consécutivement lors de leurs séances d'orthophonie.
+
+## Données manquantes
+
+```{r}
+#| label: fig-manq
+#| fig-cap: "Données manquantes par variable"
+#| fig-asp: 0.6
+
+vis_dat(tt)
+```
+
+## Caractéristiques démographiques et cliniques
+
+```{r}
+#| label: tbl-demog
+#| tbl-cap: "Description de la population (caractéristiques démographiques et cliniques)"
+
+tt |>
+  select(age, sexe, localisation, stade, traitement, phase,
+         delai_diag, nb_seances) |>
+  tbl_summary(
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_n() |>
+  tabph()
+```
+
+# Objectif principal — Détresse psychosociale (DT)
+
+## Score Distress Thermometer
+
+```{r}
+#| label: tbl-DT
+#| tbl-cap: "Score Distress Thermometer et prévalence de la détresse psychosociale"
+
+tt |>
+  select(DT_score, DT_positif) |>
+  tbl_summary(
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_ci() |>
+  tabph()
+```
+
+```{r}
+#| label: fig-DT-dist
+#| fig-cap: "Distribution des scores Distress Thermometer"
+
+p <- tt |>
+  ggplot(aes(x = DT_score, fill = DT_positif)) +
+  geom_histogram(binwidth = 1, color = "white", alpha = 0.85) +
+  geom_vline(xintercept = 3.5, linetype = "dashed", color = "red", linewidth = 1) +
+  annotate("text", x = 4.2, y = Inf, label = "Seuil = 4",
+           vjust = 1.5, hjust = 0, color = "red", size = 4) +
+  scale_fill_manual(
+    values = c("Non" = "#4DBBD5", "Oui" = "#E64B35"),
+    name   = "DT ≥ 4"
+  ) +
+  scale_x_continuous(breaks = 0:10) +
+  labs(
+    title   = "Distribution des scores Distress Thermometer",
+    x       = "Score DT (0 = aucune détresse, 10 = détresse extrême)",
+    y       = "Nombre de patients",
+    caption = "La ligne en pointillés indique le seuil clinique (≥ 4)"
+  ) +
+  theme_light() +
+  theme(
+    plot.title  = element_text(size = 14, face = "bold"),
+    axis.title  = element_text(size = 12),
+    legend.position = "top"
+  )
+ggplotly(p)
+```
+
+## Domaines de préoccupation
+
+```{r}
+#| label: tbl-domaines
+#| tbl-cap: "Prévalence des domaines de préoccupation identifiés sur la liste de problèmes du DT"
+
+tt |>
+  select(DT_pratique, DT_familial, DT_emotionnel,
+         DT_spirituel, DT_physique) |>
+  tbl_summary(
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_ci() |>
+  tabph()
+```
+
+```{r}
+#| label: fig-domaines
+#| fig-cap: "Fréquence des domaines de préoccupation selon le score DT"
+
+domaines_long <- tt |>
+  select(DT_positif, DT_pratique, DT_familial,
+         DT_emotionnel, DT_spirituel, DT_physique) |>
+  pivot_longer(
+    cols      = starts_with("DT_") & !matches("positif"),
+    names_to  = "domaine",
+    values_to = "present"
+  ) |>
+  filter(!is.na(present)) |>
+  mutate(
+    domaine = recode(domaine,
+      DT_pratique   = "Pratique",
+      DT_familial   = "Familial",
+      DT_emotionnel = "Émotionnel",
+      DT_spirituel  = "Spirituel",
+      DT_physique   = "Physique"
+    ),
+    present = factor(present, levels = c("Non", "Oui"))
+  )
+
+p2 <- domaines_long |>
+  group_by(domaine, present) |>
+  summarise(n = n(), .groups = "drop") |>
+  group_by(domaine) |>
+  mutate(pct = n / sum(n)) |>
+  filter(present == "Oui") |>
+  ggplot(aes(x = reorder(domaine, pct), y = pct, fill = domaine)) +
+  geom_col(alpha = 0.85, show.legend = FALSE) +
+  geom_text(aes(label = percent(pct, accuracy = 1)),
+            hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(labels = percent, limits = c(0, 0.85)) +
+  scale_fill_jama() +
+  labs(
+    title = "Prévalence des domaines de préoccupation",
+    x     = "Domaine",
+    y     = "Proportion de patients concernés"
+  ) +
+  theme_light() +
+  theme(plot.title = element_text(size = 14, face = "bold"))
+ggplotly(p2)
+```
+
+## Facteurs associés à la détresse psychosociale
+
+```{r}
+#| label: tbl-DT-facteurs
+#| tbl-cap: "Facteurs associés au dépistage positif (DT ≥ 4)"
+
+tt |>
+  select(DT_positif, age, sexe, localisation, stade,
+         traitement, phase, delai_diag, nb_seances) |>
+  tbl_summary(
+    by           = DT_positif,
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_p(test = ptest) |>
+  add_overall() |>
+  bold_p(t = 0.05) |>
+  bold_labels() |>
+  modify_header(label = " ") |>
+  as_kable_extra() |>
+  kable_styling(c("striped", "hover")) |>
+  scroll_box(width = "100%", height = "700px")
+```
+
+# Objectif secondaire 1 — EORTC QLQ-HN35
+
+## Scores par sous-échelle
+
+```{r}
+#| label: tbl-HN35
+#| tbl-cap: "Scores EORTC QLQ-HN35 (médiane, Q1-Q3)"
+
+hn35_vars <- tt |>
+  select(starts_with("HN35_"))
+
+var_label(hn35_vars) <- list(
+  HN35_douleur     = "Douleur buccale",
+  HN35_deglutition = "Difficultés de déglutition",
+  HN35_sensory     = "Problèmes sensoriels",
+  HN35_discours    = "Problèmes de communication orale",
+  HN35_manger_soc  = "Manger en société",
+  HN35_sexualite   = "Sexualité",
+  HN35_dents       = "Problèmes dentaires",
+  HN35_bouche_seche = "Bouche sèche",
+  HN35_salive      = "Salive épaisse",
+  HN35_toux        = "Toux",
+  HN35_mal_aise    = "Malaise",
+  HN35_image       = "Image corporelle",
+  HN35_poids       = "Perte de poids"
+)
+
+hn35_vars |>
+  tbl_summary(
+    statistic    = all_continuous() ~ "{median} ({p25}–{p75})",
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_n() |>
+  tabph()
+```
+
+## Corrélation avec le score DT
+
+```{r}
+#| label: tbl-corr-DT
+#| tbl-cap: "Corrélations de Spearman entre les sous-échelles QLQ-HN35 et le score DT"
+
+hn35_noms <- names(tt)[startsWith(names(tt), "HN35_")]
+
+corr_results <- lapply(hn35_noms, function(v) {
+  test <- cor.test(tt$DT_score, tt[[v]], method = "spearman", exact = FALSE)
+  data.frame(
+    Sous_echelle = sub("HN35_", "", v),
+    r_Spearman   = round(test$estimate, 3),
+    p_value      = signif(test$p.value, 3)
+  )
+}) |>
+  bind_rows() |>
+  mutate(
+    Interpretation = case_when(
+      abs(r_Spearman) >= 0.50 ~ "Forte",
+      abs(r_Spearman) >= 0.30 ~ "Modérée",
+      TRUE                    ~ "Faible"
+    ),
+    Significatif = ifelse(p_value < 0.05, "Oui", "Non")
+  ) |>
+  arrange(desc(abs(r_Spearman)))
+
+corr_results |>
+  kable(
+    col.names = c("Sous-échelle HN35", "r de Spearman", "p-valeur",
+                  "Interprétation", "Significatif"),
+    align     = "lrrcl"
+  ) |>
+  kable_styling(c("striped", "hover")) |>
+  row_spec(which(corr_results$Significatif == "Oui"), bold = TRUE)
+```
+
+```{r}
+#| label: fig-corrplot
+#| fig-cap: "Matrice de corrélation entre les sous-échelles QLQ-HN35 et le score DT"
+#| fig-asp: 0.9
+
+corr_data <- tt |>
+  select(DT_score, all_of(hn35_noms)) |>
+  rename_with(~ sub("HN35_", "", .), starts_with("HN35_")) |>
+  rename(DT = DT_score)
+
+corr_matrix <- cor(corr_data, method = "spearman", use = "pairwise.complete.obs")
+
+corrplot(
+  corr_matrix,
+  method  = "color",
+  type    = "upper",
+  addCoef.col = "black",
+  number.cex  = 0.7,
+  tl.col      = "black",
+  tl.srt      = 45,
+  col         = colorRampPalette(c("#2166ac", "white", "#b2182b"))(200),
+  title       = "Corrélations de Spearman",
+  mar         = c(0, 0, 1, 0)
+)
+```
+
+# Objectif secondaire 2 — Acceptabilité du dépistage
+
+```{r}
+#| label: tbl-accept
+#| tbl-cap: "Acceptabilité du dépistage déclarée par les patients"
+
+tt |>
+  select(acceptabilite) |>
+  tbl_summary(
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_ci() |>
+  tabph()
+```
+
+```{r}
+#| label: fig-accept
+#| fig-cap: "Distribution de l'acceptabilité du dépistage"
+
+accept_pct <- tt |>
+  filter(!is.na(acceptabilite)) |>
+  count(acceptabilite) |>
+  mutate(pct = n / sum(n))
+
+p3 <- accept_pct |>
+  ggplot(aes(x = acceptabilite, y = pct,
+             fill = acceptabilite, text = percent(pct, accuracy = 0.1))) +
+  geom_col(alpha = 0.85, show.legend = FALSE) +
+  geom_text(aes(label = percent(pct, accuracy = 1)),
+            vjust = -0.4, size = 4) +
+  scale_y_continuous(labels = percent, limits = c(0, 0.60)) +
+  scale_fill_manual(values = c(
+    "Pas du tout acceptable" = "#E64B35",
+    "Peu acceptable"         = "#F39B7F",
+    "Acceptable"             = "#91D1C2",
+    "Tout à fait acceptable" = "#4DBBD5"
+  )) +
+  labs(
+    title = "Acceptabilité du dépistage par les patients",
+    x     = NULL,
+    y     = "Proportion"
+  ) +
+  theme_light() +
+  theme(
+    plot.title  = element_text(size = 14, face = "bold"),
+    axis.text.x = element_text(size = 10, angle = 20, hjust = 1)
+  )
+ggplotly(p3, tooltip = c("x", "text"))
+```
+
+```{r}
+#| label: tbl-accept-facteurs
+#| tbl-cap: "Facteurs associés à une moindre acceptabilité (acceptable vs non acceptable)"
+
+tt |>
+  mutate(
+    accept_bin = ifelse(
+      acceptabilite %in% c("Acceptable", "Tout à fait acceptable"),
+      "Acceptable", "Non acceptable"
+    ) |> factor(levels = c("Non acceptable", "Acceptable"))
+  ) |>
+  select(accept_bin, DT_score, DT_positif, age, sexe, stade, phase) |>
+  tbl_summary(
+    by           = accept_bin,
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_p(test = ptest) |>
+  add_overall() |>
+  bold_p(t = 0.05) |>
+  bold_labels() |>
+  modify_header(label = " ") |>
+  as_kable_extra() |>
+  kable_styling(c("striped", "hover")) |>
+  scroll_box(width = "100%", height = "600px")
+```
+
+# Objectif secondaire 3 — Orientations psychologiques
+
+```{r}
+#| label: tbl-orient
+#| tbl-cap: "Orientations vers un professionnel de soutien psychologique"
+
+tt |>
+  select(oriente, consulte, delai_consul) |>
+  tbl_summary(
+    missing      = "ifany",
+    missing_text = "Données manquantes / non applicable"
+  ) |>
+  add_ci() |>
+  tabph()
+```
+
+```{r}
+#| label: tbl-orient-DT
+#| tbl-cap: "Concordance entre le dépistage DT et l'orientation psychologique"
+
+tt |>
+  select(oriente, DT_positif) |>
+  tbl_summary(
+    by           = DT_positif,
+    missing      = "ifany",
+    missing_text = "Données manquantes"
+  ) |>
+  add_p() |>
+  add_overall() |>
+  bold_p(t = 0.05) |>
+  bold_labels() |>
+  modify_header(label = " ") |>
+  as_kable_extra() |>
+  kable_styling(c("striped", "hover"))
+```
+
+```{r}
+#| label: perf-DT
+#| tbl-cap: "Performances diagnostiques du seuil DT ≥ 4 pour l'orientation"
+
+orient_oui <- sum(tt$oriente == "Oui", na.rm = TRUE)
+dt_pos     <- sum(tt$DT_positif == "Oui", na.rm = TRUE)
+vp <- sum(tt$DT_positif == "Oui" & tt$oriente == "Oui", na.rm = TRUE)
+fp <- sum(tt$DT_positif == "Oui" & tt$oriente == "Non", na.rm = TRUE)
+fn <- sum(tt$DT_positif == "Non" & tt$oriente == "Oui", na.rm = TRUE)
+vn <- sum(tt$DT_positif == "Non" & tt$oriente == "Non", na.rm = TRUE)
+
+sens <- vp / (vp + fn)
+spec <- vn / (vn + fp)
+vpp  <- vp / (vp + fp)
+vpn  <- vn / (vn + fn)
+
+data.frame(
+  Indicateur = c("Sensibilité", "Spécificité",
+                 "Valeur prédictive positive", "Valeur prédictive négative"),
+  Valeur     = percent(c(sens, spec, vpp, vpn), accuracy = 0.1)
+) |>
+  kable(align = "lr") |>
+  kable_styling(c("striped", "hover"))
+```
+
+# Technique
+
+L'analyse statistique a été réalisée avec le logiciel **R** [@rstat] & les packages `tidyverse` [@tidy], `gtsummary` [@gtsummary], `baseph` [@baseph], `corrplot` & `correlation` [@corr], `visdat` [@visdat] & `ggplot2` [@ggplot].
+
+Un dépôt GitHub contient l'ensemble du code source. Les données ne sont pas incluses dans ce dépôt.
+
+<https://github.com/philippemichel/DEP-VADS-ORTHO>
+
+:::
