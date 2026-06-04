@@ -1,8 +1,11 @@
 ---
 subtitle: "Plan d'analyse statistique"
+toc: false
+lof: false
+lot: false
 ---
 
-```{r info}
+```{r}
 #| label: setup
 rm(list = ls())
 library("baseph")
@@ -15,33 +18,42 @@ library("kableExtra")
 
 Le risque $\alpha$ retenu sera de 0,05 & la puissance de 0,8.
 
-Vu le faible nombre de cas attendu, on ne fera pas d'hypothèse de normalité. Les variables numériques seront présentées par leur médiane avec les quartiles (Q1-Q3) & comparées grâce au test non paramétrique de Wilcoxon. Les variables discrètes seront présentées en nombre avec le pourcentage ; l'intervalle de confiance (à 95 %) sera calculé par bootstrap (package `boot` [@boot]). Le test du $\chi^2$ sera utilisé sous réserve d'un effectif suffisant, à défaut le test exact de Fischer. Des graphiques seront réalisés pour les résultats importants (package `ggplot2` [@ggplot]).
+Vu le faible nombre de cas attendu, on ne fera pas d'hypothèse de normalité. Les variables numériques seront présentées par leur médiane avec les quartiles & comparées grâce au test non paramétrique de Wilcoxon.
+
+Les variables discrètes seront présentées en nombre avec le pourcentage ; l'intervalle de confiance (à 95 %) sera calculé par bootstrap (package `boot` [@boot]). Le test du $\chi^2$ sera utilisé sous réserve d'un effectif suffisant, à défaut le test exact de Fischer. Des graphiques seront réalisés pour les résultats importants (package `ggplot2` [@ggplot]).
+
+Si nécessaire des analyses multivariées en régression logistique sera pratiquée en prenant tout d’abord en compte tous les critères ayant eu une p-value < 0,2 sur les tests simples puis en sélectionnant les plus 
+
+pertinents (appréciation purement mathématique) par une analyse en step-by-step descendant basé sur l’AIC.
+
 
 ## Taille de l'échantillon
 
-Il s'agit d'une étude observationnelle de faisabilité pour laquelle il est difficile de préciser a priori un nombre de cas nécessaires. Néanmoins, sur la base de la littérature rapportant une prévalence de détresse psychosociale d'environ 30 à 50 % chez les patients atteints de cancers des VADS, un minimum de 40 à 50 cas est requis pour obtenir une estimation suffisamment précise de la proportion avec un intervalle de confiance acceptable.
+Il s'agit d'une étude observationnelle de faisabilité pour laquelle il est difficile de préciser a priori un nombre de cas nécessaires. Néanmoins, sur la base de la littérature rapportant une prévalence de détresse psychosociale d'environ \qtyrange{30}{50}{\percent} chez les patients atteints de cancers des VADS, un minimum de \numrange{40}{50} cas est requis pour obtenir une estimation suffisamment précise de la proportion avec un intervalle de confiance acceptable.
 
 ## Données manquantes
 
 Le décompte des données manquantes sera réalisé & présenté par un tableau ou un graphique (package `visdat` [@visdat]). Les variables comportant plus de 20 % de données manquantes ou non utilisables ne seront pas prises en compte après validation par le promoteur.
 
-Une imputation des données manquantes (package `missMDA` [@miss]) sera réalisée uniquement pour les analyses de corrélation & pour la recherche du meilleur modèle par step-by-step descendant. Le calcul final sera effectué sur les données réelles.
+Une imputation des données manquantes (package `missMDA` [@miss]) sera réalisée uniquement pour les analyses de corrélation, l'analyse factorielle & pour la recherche du meilleur modèle par step-by-step descendant. 
+
+## Qualité des données
+
+Une analyse de corrélation (package `corr` [@corr]) entre les variables sera réalisée & présentée sur un graphique de corrélation. Si certaines variables se montrent anormalement corrélées elles devront être exclues de l'étude après accord du promoteur.
 
 # Description de la population
 
-Un tableau descriptif présentera les caractéristiques démographiques & cliniques des patients inclus : âge, sexe, type & stade du cancer, type de traitement reçu (chirurgie, radiothérapie, chimiothérapie ou combinaison), délai depuis le diagnostic, nombre de séances d'orthophonie réalisées.
+Un tableau descriptif présentera les caractéristiques démographiques & cliniques des patients inclus : âge, sexe, type & stade du cancer, type de traitement reçu (chirurgie, radiothérapie, chimiothérapie\dots), délai depuis le diagnostic\dots
 
 Les variables continues seront présentées en médiane (Q1-Q3) et les variables catégorielles en effectif et pourcentage.
 
 # Objectif principal
 
-**Proportion de patients présentant une détresse psychosociale identifiée**
+*Proportion de patients présentant une détresse psychosociale identifiée*
 
-La détresse psychosociale sera évaluée par le *Distress Thermometer* (DT) [@DT; @DTvalid], échelle numérique allant de 0 (aucune détresse) à 10 (détresse extrême). Le seuil clinique retenu sera de **4** conformément aux recommandations du NCCN [@NCCN] & aux données de validation françaises [@DTvalid].
+La détresse psychosociale sera évaluée par le *Distress Thermometer* (DT) [@DT; @DTvalid], échelle numérique allant de 0 (aucune détresse) à 10 (détresse extrême). Le seuil clinique retenu sera de 4 conformément aux recommandations du NCCN [@NCCN] & aux données de validation françaises [@DTvalid].
 
 La proportion de patients présentant un score DT $\geq$ 4 sera calculée avec son intervalle de confiance à 95 % (méthode de Wilson).
-
-Une description des domaines de préoccupation identifiés sur la liste de problèmes associée au DT (domaines pratiques, familiaux, émotionnels, spirituels, physiques) sera réalisée.
 
 ## Analyse par sous-groupes
 
@@ -49,18 +61,20 @@ Une analyse exploratoire comparera la proportion de patients en détresse selon 
 
 - Le stade de la maladie (localisé vs localement avancé/métastatique)
 - Le type de traitement (chirurgie seule vs traitement incluant radiothérapie/chimiothérapie)
-- La phase de prise en charge (traitement actif vs surveillance)
-- Le délai depuis le diagnostic
+- Les variables démographiques : $age, sexe\dots
+
 
 Ces comparaisons seront effectuées avec le test exact de Fisher (effectifs attendus faibles) ou le test du $\chi^2$ selon les conditions d'application.
 
+Une analyse multivariée par régression logistique pourrait être envisagée pour identifier les facteurs indépendamment associés à la détresse psychosociale (score DT $\geq$ 4) si le nombre de cas le permet.
+
 # Objectifs secondaires
 
-## Objectif 1 : Scores EORTC QLQ-HN35 & corrélation avec la détresse psychosociale
+## Objectif 1 : 
 
-Le questionnaire **EORTC QLQ-HN35** [@HN35] est un instrument validé d'évaluation de la qualité de vie spécifique aux cancers de la tête et du cou (35 items couvrant symptômes & fonctions). Les scores seront calculés selon le manuel de scoring EORTC (transformation linéaire en scores de 0 à 100).
+*Scores EORTC QLQ-HN35 & corrélation avec la détresse psychosociale.*
 
-Pour les **échelles fonctionnelles** et **symptomatiques** du QLQ-HN35, les scores seront présentés en médiane (Q1-Q3).
+Le questionnaire **EORTC QLQ-HN35** [@HN35] est un instrument validé d'évaluation de la qualité de vie spécifique aux cancers de la tête et du cou (35 items couvrant symptômes & fonctions,regroupés en 7 groupes & douzes variables indépendantes.). Les scores seront calculés selon le manuel de scoring EORTC (transformation linéaire en scores de 0 à 100) & présentés en médiane & quartiles.
 
 La corrélation entre les scores QLQ-HN35 et le score DT sera évaluée par le **coefficient de corrélation de Spearman** [@spearman] (package `correlation` [@corr]) en raison de la non-normalité des distributions. L'interprétation retenue sera :
 
@@ -68,15 +82,10 @@ La corrélation entre les scores QLQ-HN35 et le score DT sera évaluée par le *
 - $0,30 \leq |r_s| < 0,50$ : corrélation modérée
 - $|r_s| \geq 0,50$ : corrélation forte
 
-Une matrice de corrélation graphique sera produite pour visualiser l'ensemble des associations entre les sous-échelles du QLQ-HN35 & le score DT.
 
 ## Objectif 2 : Acceptabilité du dépistage par les patients
 
-L'acceptabilité sera évaluée à l'aide d'une échelle de Likert en 4 niveaux (« Pas du tout acceptable », « Peu acceptable », « Acceptable », « Tout à fait acceptable ») renseignée par le patient à l'issue de la séance de dépistage.
-
-La proportion de patients jugeant le dépistage « Acceptable » ou « Tout à fait acceptable » sera calculée avec son intervalle de confiance à 95 %.
-
-Des facteurs associés à une moindre acceptabilité (score DT élevé, caractéristiques socio-démographiques) seront explorés par régression logistique si l'effectif le permet.
+L'acceptabilité sera évaluée sur le nombre de questionnaires (Échelle numérique & questionnaire EORTC QLQ-HN35) rempli correctement, incomplets ou pas du tout. 
 
 ## Objectif 3 : Nombre de patients orientés vers un professionnel de soutien psychologique
 
@@ -84,12 +93,16 @@ Le nombre (et la proportion avec IC 95 %) de patients ayant été orientés vers
 
 La concordance entre le résultat du dépistage (DT $\geq$ 4) & la décision d'orientation sera évaluée (sensibilité, spécificité, valeur prédictive positive & négative du seuil DT = 4 pour l'orientation).
 
-Le délai médian entre le dépistage & la prise en charge psychologique effective (premier rendez-vous obtenu) sera calculé, ainsi que la proportion de patients ayant effectivement consulté parmi ceux orientés.
 
 # Technique
 
 L'analyse statistique sera réalisée avec le logiciel **R** [@rstat] & divers packages. Outre ceux cités dans le texte on utilisera en particulier `tidyverse` [@tidy], `gtsummary` [@gtsummary] & `baseph` [@baseph].
 
-Un dépôt GitHub sera utilisé qui ne comprendra que le code & non les données ou résultats. Un jeu de données synthétique sera fourni pour permettre de tester le code en l'absence des données réelles.
+Un dépôt GitHub sera utilisé qui ne comprendra que le code & non les données ou résultats. Un jeu de données synthétique pourra être fourni pour permettre de tester le code.
 
+\begin{center}
 <https://github.com/philippemichel/DEP-VADS-ORTHO>
+\end{center}
+
+\appendix
+# Bibliographie
